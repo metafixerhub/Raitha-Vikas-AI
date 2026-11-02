@@ -19,7 +19,7 @@ build
 *.sqlite3
 *.db
 *.db-journal
-data/
+/data/
 
 # Logs
 npm-debug.log*

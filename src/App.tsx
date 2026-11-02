@@ -5,6 +5,7 @@ import { Sidebar } from './components/common/Sidebar';
 import { BottomNav } from './components/common/BottomNav';
 import { NotificationsModal } from './components/common/NotificationsModal';
 import { ExhibitionGuideModal } from './components/common/ExhibitionGuideModal';
+import { LoadingScreen } from './components/common/LoadingScreen';
 
 // Pages
 import { Dashboard } from './pages/Dashboard';
@@ -82,6 +83,9 @@ export const App: React.FC = () => {
 
       {/* Science Fair Model Rig Transparency Guide */}
       <ExhibitionGuideModal />
+
+      {/* App Initialization Splash Loading Screen */}
+      <LoadingScreen />
 
     </div>
   );

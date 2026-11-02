@@ -107,6 +107,8 @@ interface FarmState {
   setNotificationsOpen: (open: boolean) => void;
   exhibitionModalOpen: boolean;
   setExhibitionModalOpen: (open: boolean) => void;
+  isAppLoading: boolean;
+  setIsAppLoading: (loading: boolean) => void;
 
   // Heartbeat simulation tick
   simulateSensorTick: () => void;
@@ -482,6 +484,9 @@ export const useFarmStore = create<FarmState>((set, get) => ({
 
   exhibitionModalOpen: false,
   setExhibitionModalOpen: (open) => set({ exhibitionModalOpen: open }),
+
+  isAppLoading: true,
+  setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
 
   // Heartbeat simulation tick
   simulateSensorTick: () => {

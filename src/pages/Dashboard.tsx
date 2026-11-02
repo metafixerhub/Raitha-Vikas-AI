@@ -72,13 +72,45 @@ export const Dashboard: React.FC = () => {
     setIrrigationMode(next ? 'auto' : 'manual');
   };
 
+  const getTimeGreeting = (lang: string) => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      return {
+        icon: '☀️',
+        greeting: lang === 'kn' ? 'ಶುಭೋದಯ, ರೈತ ಬಾಂಧವರೇ!' : lang === 'hi' ? 'शुभ प्रभात, किसान भाई!' : 'Good Morning, Farmer!',
+        sub: lang === 'kn' ? 'ನಿಮ್ಮ ಜಮೀನು ಇಂದು ಆರೋಗ್ಯಕರವಾಗಿದೆ. ಮುಂಜಾನೆಯ ಸಂವೇದಕ ವಾಚನಗಳು ಸಿದ್ಧವಾಗಿವೆ.' : lang === 'hi' ? 'आज आपकी फसल अच्छी स्थिति में है। सुबह का सेंसर डेटा तैयार है।' : 'Your farm is looking healthy today. Morning sensor telemetry calibrated.'
+      };
+    } else if (hour >= 12 && hour < 17) {
+      return {
+        icon: '🌤️',
+        greeting: lang === 'kn' ? 'ಶುಭ ಮಧ್ಯಾಹ್ನ, ರೈತ ಬಾಂಧವರೇ!' : lang === 'hi' ? 'शुभ दोपहर, किसान भाई!' : 'Good Afternoon, Farmer!',
+        sub: lang === 'kn' ? 'ಬಿಸಿಲು ಹೆಚ್ಚಾಗಿದೆ. ಬೇರುಗಳ ಶಾಖದ ಒತ್ತಡ ತಡೆಯಲು ಮಣ್ಣಿನ ತೇವಾಂಶ ಗಮನಿಸಿ.' : lang === 'hi' ? 'धूप तेज है। मिट्टी की नमी पर नजर रखें ताकि फसल को कोई नुकसान न हो।' : 'Sunlight is high. Monitor root zone moisture to prevent heat stress.'
+      };
+    } else if (hour >= 17 && hour < 21) {
+      return {
+        icon: '🌅',
+        greeting: lang === 'kn' ? 'ಶುಭ ಸಂಜೆ, ರೈತ ಬಾಂಧವರೇ!' : lang === 'hi' ? 'शुभ संध्या, किसान भाई!' : 'Good Evening, Farmer!',
+        sub: lang === 'kn' ? 'ಸಂಜೆಯ ಪರಿಶೀಲನೆ: ಇಂದಿನ ಮಾರುಕಟ್ಟೆ ಧಾರಣೆ ಮತ್ತು ಸಂವೇದಕ ವಾಚನಗಳು ನವೀಕರಣಗೊಂಡಿವೆ.' : lang === 'hi' ? 'शाम का निरीक्षण: आज के मंडी भाव और सेंसर डेटा अपडेट हो गए हैं।' : 'Evening review: Today\'s mandi prices and sensor readings are synchronized.'
+      };
+    } else {
+      return {
+        icon: '🌙',
+        greeting: lang === 'kn' ? 'ಶುಭ ರಾತ್ರಿ, ರೈತ ಬಾಂಧವರೇ!' : lang === 'hi' ? 'शुभ रात्रि, किसान भाई!' : 'Good Night, Farmer!',
+        sub: lang === 'kn' ? 'ರಾತ್ರಿಯ ಸ್ವಯಂಚಾಲಿತ ನಿಗಾ ಸಕ್ರಿಯವಾಗಿದೆ. ನೀರಾವರಿ ಪಂಪ್ ಸಿದ್ಧ ಸ್ಥಿತಿಯಲ್ಲಿದೆ.' : lang === 'hi' ? 'रात की स्वचालित निगरानी सक्रिय है। सिंचाई पंप तैयार स्थिति में है।' : 'Automated night-monitoring active. Submersible pump standby.'
+      };
+    }
+  };
+
+  const currentGreeting = getTimeGreeting(language);
+
   const handleTestVoice = () => {
+    const greetingText = currentGreeting.greeting;
     triggerVoiceAnnouncement(
-      'Good morning farmer! Soil moisture is 32 percent, soil pH is 6.5. Irrigation pump is turned off.',
+      `${greetingText} Soil moisture is ${sensors.soilMoisture} percent, soil pH is ${sensors.soilPh}. Irrigation pump is ${sensors.pumpStatus ? 'running' : 'turned off'}.`,
       'system',
       'info',
-      'ಶುಭೋದಯ ರೈತ ಬಾಂಧವರೇ! ಮಣ್ಣಿನ ತೇವಾಂಶ ೩೨% ಮತ್ತು ಪಿಎಚ್ ೬.೫ ರಷ್ಟಿದೆ.',
-      'शुभ प्रभात किसान भाई! मिट्टी की नमी 32% और पीएच मान 6.5 है।'
+      `${currentGreeting.greeting} ಮಣ್ಣಿನ ತೇವಾಂಶ ${sensors.soilMoisture}% ಮತ್ತು ಪಿಎಚ್ ${sensors.soilPh} ರಷ್ಟಿದೆ.`,
+      `${currentGreeting.greeting} मिट्टी की नमी ${sensors.soilMoisture}% और पीएच मान ${sensors.soilPh} है।`
     );
   };
 
@@ -108,13 +140,13 @@ export const Dashboard: React.FC = () => {
         <div className="relative z-10 p-6 sm:p-8 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1 max-w-xl">
             <div className="flex items-center gap-2.5">
-              <span className="text-harvest-400 text-2xl">☀️</span>
+              <span className="text-harvest-400 text-2xl">{currentGreeting.icon}</span>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-sm">
-                {language === 'kn' ? 'ಶುಭೋದಯ, ರೈತ ಬಾಂಧವರೇ!' : language === 'hi' ? 'शुभ प्रभात, किसान भाई!' : 'Good Morning, Farmer!'}
+                {currentGreeting.greeting}
               </h1>
             </div>
             <p className="text-forest-100 text-sm sm:text-base font-medium pl-8 drop-shadow-xs">
-              {language === 'kn' ? 'ನಿಮ್ಮ ಜಮೀನು ಇಂದು ಆರೋಗ್ಯಕರವಾಗಿದೆ.' : language === 'hi' ? 'आज आपकी फसल अच्छी स्थिति में है।' : 'Your farm is looking healthy today.'}
+              {currentGreeting.sub}
             </p>
           </div>
 

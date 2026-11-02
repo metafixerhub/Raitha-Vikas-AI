@@ -92,6 +92,7 @@ export interface MandiPrice {
   id: string;
   cropName: string;
   regionalName: string;
+  category?: 'Grains & Cereals' | 'Vegetables' | 'Plantation & Cash Crops' | 'Spices' | 'Pulses & Oilseeds' | 'Fruits';
   marketName: string;
   state: string;
   modalPrice: number; // in ₹/Quintal

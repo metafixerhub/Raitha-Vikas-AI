@@ -14,7 +14,10 @@ import {
   AlertCircle,
   RefreshCw,
   Globe,
-  ShieldAlert
+  ShieldAlert,
+  Key,
+  Check,
+  X
 } from 'lucide-react';
 import { AppLanguage } from '../types';
 
@@ -50,7 +53,27 @@ export const AIAssistantPage: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(
+    typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : ''
+  );
+  const [hasSavedKey, setHasSavedKey] = useState(
+    typeof window !== 'undefined' ? Boolean(localStorage.getItem('gemini_api_key')) : false
+  );
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveApiKey = () => {
+    if (typeof window !== 'undefined') {
+      if (apiKeyInput.trim()) {
+        localStorage.setItem('gemini_api_key', apiKeyInput.trim());
+        setHasSavedKey(true);
+      } else {
+        localStorage.removeItem('gemini_api_key');
+        setHasSavedKey(false);
+      }
+    }
+    setShowKeyModal(false);
+  };
 
   const quickPrompts = [
     {
@@ -156,8 +179,21 @@ ${language === 'kn'
           </div>
         </div>
 
-        {/* Live Telemetry Pill Snapshot */}
+        {/* Live Telemetry Pill Snapshot & Optional Key Config */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <button
+            onClick={() => setShowKeyModal(true)}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 shadow-2xs ${
+              hasSavedKey
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+            }`}
+            title="Configure Gemini API Key"
+          >
+            <Key className="w-3.5 h-3.5 text-harvest-500" />
+            <span>{hasSavedKey ? 'Gemini Key Active' : 'Set Gemini Key (Optional)'}</span>
+          </button>
+
           <span className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
             <Droplets className="w-3.5 h-3.5" /> {sensors.soilMoisture}% Moisture
           </span>
@@ -169,6 +205,75 @@ ${language === 'kn'
           </span>
         </div>
       </div>
+
+      {/* Modal for Setting Custom Gemini API Key */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-harvest-100 dark:bg-harvest-950 text-harvest-800 dark:text-harvest-300">
+                  <Key className="w-5 h-5 text-harvest-600" />
+                </div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  Gemini AI API Key (Optional)
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowKeyModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              If you have a Google AI Studio Gemini API key, paste it here. It is saved <strong>locally in your browser</strong> and unlocks real-time Gemini Multimodal Live reasoning on Vercel.
+              <br /><br />
+              <em>Note: If left blank, Raitha Vikas AI automatically uses our built-in precision agronomy engine with live sensor context.</em>
+            </p>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5 uppercase">
+                Gemini API Key:
+              </label>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-forest-600"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              {hasSavedKey && (
+                <button
+                  type="button"
+                  onClick={() => { setApiKeyInput(''); localStorage.removeItem('gemini_api_key'); setHasSavedKey(false); setShowKeyModal(false); }}
+                  className="px-3 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition"
+                >
+                  Clear Key
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveApiKey}
+                className="px-4 py-2 rounded-xl bg-forest-800 hover:bg-forest-700 text-white text-xs font-bold shadow-md transition"
+              >
+                Save & Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Chat Messages Container */}
       <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-y-auto space-y-4">

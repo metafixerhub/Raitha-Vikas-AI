@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-forest-700 selection:text-white transition-colors duration-200;
+  }
+
+  .dark body {
+    @apply bg-[#07130c] text-slate-100 selection:bg-harvest-500 selection:text-slate-950;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e3a29;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.dark .glass-panel {
+  background: rgba(10, 29, 18, 0.88);
+}
+
+/* Glowing animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(22, 163, 74, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(22, 163, 74, 0.8);
+  }
+}
+
+@keyframes pulseGoldGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.7);
+  }
+}
+
+@keyframes pulseBlueGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(29, 104, 216, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(29, 104, 216, 0.75);
+  }
+}
+
+.animate-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.animate-glow-gold {
+  animation: pulseGoldGlow 2s infinite ease-in-out;
+}
+
+.animate-glow-blue {
+  animation: pulseBlueGlow 2s infinite ease-in-out;
+}

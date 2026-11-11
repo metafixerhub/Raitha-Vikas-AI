@@ -16,13 +16,16 @@ import {
   Timer,
   Zap,
   ArrowRight,
-  Gauge
+  Gauge,
+  ShieldAlert,
+  BatteryCharging
 } from 'lucide-react';
 
 export const IrrigationControl: React.FC = () => {
   const { 
     sensors, 
     togglePump, 
+    emergencyStopPump,
     irrigationMode, 
     setIrrigationMode, 
     moistureThresholdLow, 
@@ -58,11 +61,11 @@ export const IrrigationControl: React.FC = () => {
           <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold">Hardware Relay Controller Architecture: </span>
-            Manual and automatic pump actions currently update simulated application state. Live 220V/12V submersible pump actuation requires the ESP32 relay module (GPIO 16) confirmation.
+            The mini DC water pump is switched via an optoisolated 5V Single-Channel Relay Module (GPIO 27) and powered by an independent DC battery. Automatic watering runs autonomously on the ESP32 even if Wi-Fi disconnects.
           </div>
         </div>
-        <span className="px-2 py-1 rounded bg-sky-200/60 dark:bg-sky-900/60 text-sky-900 dark:text-sky-200 font-semibold shrink-0">
-          Relay: GPIO 16 (Ready)
+        <span className="px-2.5 py-1 rounded-full bg-sky-200/60 dark:bg-sky-900/60 text-sky-900 dark:text-sky-200 font-bold shrink-0">
+          Relay: GPIO 27 &bull; 5V Isolated
         </span>
       </div>
 
@@ -130,6 +133,34 @@ export const IrrigationControl: React.FC = () => {
                       Tap to switch
                     </span>
                   </div>
+                </button>
+              </div>
+
+              {/* Quick Action Controls: ON, OFF, and EMERGENCY STOP */}
+              <div className="flex items-center gap-2 max-w-sm mx-auto">
+                <button
+                  onClick={() => togglePump(true)}
+                  disabled={sensors.pumpStatus}
+                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1"
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  <span>Pump ON</span>
+                </button>
+                <button
+                  onClick={() => togglePump(false)}
+                  disabled={!sensors.pumpStatus}
+                  className="flex-1 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1"
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  <span>Pump OFF</span>
+                </button>
+                <button
+                  onClick={emergencyStopPump}
+                  className="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md flex items-center justify-center gap-1 shrink-0"
+                  title="Immediate Safety Cut-off"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>EMERGENCY</span>
                 </button>
               </div>
 

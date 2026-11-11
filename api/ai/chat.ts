@@ -35,15 +35,18 @@ export default async function handler(req: any, res: any) {
 Language: ${language === 'kn' ? 'Kannada (ಕನ್ನಡ)' : language === 'hi' ? 'Hindi (हिंदी)' : 'English'}.
 Live Farm Telemetry:
 - Crop Stand: ${farmContext?.cropType || 'Paddy (Rice) & Tomato'}
-- Soil Moisture: ${farmContext?.soilMoisture ?? 32}%
+- Soil Moisture: ${farmContext?.soilMoisture ?? 32}% (${farmContext?.moistureStatus || (Number(farmContext?.soilMoisture ?? 32) < 35 ? 'Dry' : Number(farmContext?.soilMoisture ?? 32) > 65 ? 'Wet' : 'Normal')})
 - Soil pH: ${farmContext?.soilPh ?? 6.5}
-- Temperature: ${farmContext?.temperature ?? 28.5}°C
-- Air Humidity: ${farmContext?.humidity ?? 71}%
-- Irrigation Pump: ${farmContext?.pumpStatus ? 'ON (Water flowing)' : 'OFF (Standby)'}
+- Temperature: ${farmContext?.temperature ?? 28.5}°C (DHT22)
+- Air Humidity: ${farmContext?.humidity ?? 71}% (DHT22)
+- Irrigation Pump: ${farmContext?.pumpStatus ? 'ON (Water flowing via 5V Relay)' : 'OFF (Standby)'}
+- Controller Battery: ${farmContext?.controllerBatteryPercent ?? 84}% (MAX17048 Fuel Gauge)
+- Safety System: Autonomous local hysteresis & 3-minute runaway watchdog active on ESP32
 
 Farmer Question: ${prompt}
 
-Provide practical, clear, and actionable precision farming advice incorporating the sensor telemetry above.`
+Provide practical, clear, and actionable precision farming advice incorporating the sensor telemetry above.
+Safety Guardrails: Always respect the ESP32 controller's local safety rules. The pump is isolated via a 5V relay module with a dedicated DC battery and local hardware watchdog.`
               }]
             }]
           })

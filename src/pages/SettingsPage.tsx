@@ -40,12 +40,16 @@ export const SettingsPage: React.FC = () => {
     isVoiceMuted,
     toggleVoiceMute,
     triggerVoiceAnnouncement,
-    setExhibitionModalOpen
+    setExhibitionModalOpen,
+    isHardwareMode,
+    setHardwareMode,
+    esp32Url: storeEsp32Url,
+    setEsp32Url: setStoreEsp32Url,
+    connectESP32
   } = useFarmStore();
 
-  const [operationMode, setOperationMode] = useState<'demo' | 'live'>('demo');
-  const [esp32Url, setEsp32Url] = useState<string>(
-    import.meta.env.VITE_ESP32_BASE_URL || ''
+  const [esp32Url, setLocalEsp32Url] = useState<string>(
+    storeEsp32Url || (typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || '' : '')
   );
   const [hardwareStatus, setHardwareStatus] = useState<ESP32Status | null>(null);
   const [isPinging, setIsPinging] = useState(false);
@@ -112,33 +116,33 @@ export const SettingsPage: React.FC = () => {
       
       {/* Mode Switcher Banner: Demo vs Live Mode (Section 6 Requirement) */}
       <div className={`p-5 rounded-3xl border transition-all ${
-        operationMode === 'live'
+        isHardwareMode
           ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-900 dark:text-emerald-200'
           : 'bg-amber-500/10 border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-200'
       }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className={`p-2.5 rounded-2xl ${
-              operationMode === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+              isHardwareMode ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
             }`}>
               <Power className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-base text-slate-900 dark:text-white">
-                  System Operating Mode: {operationMode.toUpperCase()}
+                  System Operating Mode: {isHardwareMode ? 'LIVE HARDWARE' : 'DEMO MODE'}
                 </span>
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                  operationMode === 'live' 
+                  isHardwareMode 
                     ? 'bg-emerald-500 text-white animate-pulse' 
                     : 'bg-amber-400 text-slate-950'
                 }`}>
-                  {operationMode === 'live' ? 'HARDWARE CONTROL ENABLED' : 'SAFE DEMO / SCIENCE FAIR'}
+                  {isHardwareMode ? 'HARDWARE CONTROL ENABLED' : 'SAFE DEMO / SCIENCE FAIR'}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                {operationMode === 'live'
-                  ? 'Live Mode connects directly to the physical ESP32 WROOM-32 board. If the board is disconnected, real error states are shown. Actual pump actuation is permitted.'
+                {isHardwareMode
+                  ? 'Live Mode connects directly to the physical ESP32 WROOM-32 board over Wi-Fi. If disconnected, connection warnings are raised and telemetry is paused.'
                   : 'Demo Mode runs calibrated simulations for demonstration at the school science fair. It does not control real 220V/5V physical hardware.'}
               </p>
             </div>
@@ -148,11 +152,11 @@ export const SettingsPage: React.FC = () => {
           <div className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shrink-0">
             <button
               onClick={() => {
-                setOperationMode('demo');
+                setHardwareMode(false);
                 triggerVoiceAnnouncement('System switched to Demo Mode.', 'system', 'info');
               }}
               className={`px-4 py-2 rounded-xl text-xs font-black transition ${
-                operationMode === 'demo'
+                !isHardwareMode
                   ? 'bg-amber-500 text-slate-950 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
@@ -161,12 +165,12 @@ export const SettingsPage: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                setOperationMode('live');
+                setHardwareMode(true);
                 triggerVoiceAnnouncement('System switched to Live Hardware Mode.', 'system', 'warning');
                 pingESP32();
               }}
               className={`px-4 py-2 rounded-xl text-xs font-black transition ${
-                operationMode === 'live'
+                isHardwareMode
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
@@ -417,12 +421,15 @@ export const SettingsPage: React.FC = () => {
               <input
                 type="text"
                 value={esp32Url}
-                onChange={(e) => setEsp32Url(e.target.value)}
-                placeholder="http://192.168.1.145 (or leave blank for demo)"
+                onChange={(e) => {
+                  setLocalEsp32Url(e.target.value);
+                  setStoreEsp32Url(e.target.value);
+                }}
+                placeholder="http://192.168.43.100 (ESP32 Wi-Fi Hotspot IP)"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[10px] text-slate-400">
-                Example: http://192.168.4.1 (ESP32 SoftAP) or your local home router IP
+                Example: http://192.168.43.100 (Assigned by your mobile phone hotspot)
               </span>
             </div>
 

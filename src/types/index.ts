@@ -16,15 +16,21 @@ export type AppLanguage = 'en' | 'kn' | 'hi';
 
 export interface SensorReading {
   soilMoisture: number; // percentage (0 - 100)
+  moistureStatus: MoistureStatus; // 'Dry' | 'Normal' | 'Wet'
   soilPh: number; // 0 - 14 scale (e.g. 6.5)
   soilPhStatus: SoilPhStatus;
-  temperature: number; // °C
-  humidity: number; // percentage
+  temperature: number; // °C from DHT22
+  humidity: number; // percentage from DHT22
   pumpStatus: boolean; // true = ON, false = OFF
-  batteryLevel: number; // percentage
-  solarStatus: 'Charging' | 'Discharging' | 'Standby';
-  solarWatts: number; // e.g., 42W
+  controllerBatteryPercent: number; // from MAX17048 Fuel Gauge
+  controllerBatteryVoltage: number; // from MAX17048 in Volts (e.g. 3.92V)
+  pumpBatteryStatus: string; // Separate DC Battery for water pump
+  batteryLevel: number; // backwards-compatible alias for controllerBatteryPercent
+  solarStatus?: 'Charging' | 'Discharging' | 'Standby';
+  solarWatts?: number; // e.g., 42W
   timestamp: string;
+  isLiveHardware?: boolean;
+  sensorFault?: boolean;
 }
 
 export interface HistoricalDataPoint {
@@ -172,4 +178,7 @@ export interface ESP32DeviceState {
   signalStrengthDbm: number;
   firmwareVersion: string;
   lastHeartbeat: string;
+  lastSuccessfulUpdate?: string;
+  errorMessage?: string;
+  safetyWatchdogActive?: boolean;
 }

@@ -193,22 +193,26 @@ Visit **`http://localhost:3001`**
 
 The ESP32 Arduino firmware is located in: [`firmware/esp32_raitha_vikas.ino`](file:///c:/Users/maksedul%20mandal/OneDrive/Desktop/Raitha%20Vikas%20AI/firmware/esp32_raitha_vikas.ino).
 
-### Pin Wiring Diagram
+### Pin Wiring Diagram (Production Node Rig)
 
-| Component | Pin on Module | ESP32 GPIO Pin | Power Supply | Notes |
+| Component | Pin on Module | ESP32 GPIO Pin | Power Rail | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **Capacitive Soil Sensor** | Analog AOUT | **GPIO 34** (ADC1) | 3.3V | Calibrate dry (3200) vs water (1400) |
-| **Soil pH Sensor Probe** | Analog Po | **GPIO 32** (ADC1) | 5.0V | Calibrate with pH 4.0 & 7.0 buffer |
-| **DHT22 Climate Sensor** | Data Pin | **GPIO 4** (Pull-up) | 3.3V / 5V | 10kΩ pull-up resistor to VCC |
-| **5V Relay Module** | IN / Signal | **GPIO 16** | 5.0V | Active LOW relay recommended |
-| **Solar Voltage Divider** | Analog Out | **GPIO 35** (ADC1) | 3.3V Max ADC | 100kΩ / 20kΩ divider from 12V solar |
-| **OLED Display (SSD1306)**| SDA / SCL | **GPIO 21 / 22** | 3.3V | I2C address `0x3C` |
-| **MAX98357A I2S Audio** | BCLK / LRC / DIN | **GPIO 26, 25, 22** | 5.0V | Connected to 3W 4Ω speaker |
+| **Capacitive Soil Sensor** | Analog AOUT | **GPIO 34** (ADC1) | 3.3V (ESP32) | Calibrate dry (~3100) vs water (~1450). Safe with active Wi-Fi. |
+| **DHT22 Climate Sensor** | Data Pin | **GPIO 4** (Pull-up) | 3.3V (ESP32) | 10kΩ pull-up resistor to 3.3V rail |
+| **5V Relay Module** | IN / Signal | **GPIO 27** | 5V (JX-887Y) | Active LOW relay. Controls Mini DC Pump. |
+| **MAX17048 Fuel Gauge** | SDA / SCL | **GPIO 21 / 22** | 3.3V (ESP32) | I2C address `0x36`. Measures 18650 pack SOC % and voltage. |
+| **Mini DC Water Pump** | +/- Terminals | Switched via Relay NO | **Dedicated DC Battery** | **Isolated DC battery** prevents motor noise & ESP32 brownouts. |
+| **Wi-Fi Indicator LED** | Anode (+) | **GPIO 2** (Onboard) | Current limited | Solid = Connected, Blinking = Searching hotspot |
+| **Pump Active LED** | Anode (+) | **GPIO 12** | 220Ω resistor | Illuminates whenever relay is energized |
+| **Sensor Fault LED** | Anode (+) | **GPIO 14** | 220Ω resistor | Warns of sensor disconnect or short circuit |
+| **18650 Battery Pack** | 3.7V Nominal | Input to JX-887Y | Battery BMS | Powers ESP32 controller and sensors |
+| **JX-887Y Boost Module** | 5V Output | ESP32 VIN & Relay VCC| 5.0V Regulated | Supplies clean 5V 2A power rail |
 
 ### ⚠️ Hardware Safety Warning
-- **Relay Flyback Protection**: Inductive loads (water pumps) produce voltage spikes when powered off. Always use a relay board with an optocoupler and flyback diode to prevent ESP32 brownouts and resets.
-- **Power Isolation**: Never power a 12V or 240V submersible pump directly from the ESP32 board's 3.3V pin. Use an external 12V 2A power adapter or 18650 battery pack with common ground.
-- **Watchdog Timer**: The firmware contains an internal 30-minute auto-cutoff watchdog. If communication with the server drops during pumping, the ESP32 will automatically turn off the relay after 30 minutes.
+- **Optoisolated Relay Switching**: The mini DC water pump must never be driven directly from an ESP32 GPIO pin. A 5V relay module with optocoupler isolation is mandatory.
+- **Power Isolation**: The water pump is powered by a **separate DC battery** through the relay's Normally Open (NO) contacts. This prevents motor inductive kickback and voltage sag from resetting the ESP32.
+- **Runaway Watchdog Timer**: The firmware contains an autonomous 3-minute max-watering watchdog. Even if the web app or phone hotspot disconnects, the ESP32 will automatically turn off the relay after 3 minutes.
+- **Local Autonomous Edge Operation**: In Automatic Mode, the ESP32 continuously checks soil moisture and manages irrigation locally. Network connectivity is only required for syncing telemetry to the mobile web app.
 
 ---
 

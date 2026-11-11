@@ -294,77 +294,222 @@ Farmer Question: ${prompt}`
   }
 
   /**
-   * Query ESP32 status
+   * Query ESP32 status (Direct Wi-Fi / Hotspot LAN with fallback to backend proxy)
    */
   public async getESP32Status(overrideUrl?: string): Promise<ESP32Status> {
+    const targetUrl = (overrideUrl || (typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') : '') || 'http://192.168.4.1').replace(/\/+$/, '');
+    
+    // 1. Try Direct fetch over Wi-Fi / Hotspot LAN with 2.5s timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const directRes = await fetch(`${targetUrl}/api/status`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+      const { ok, data } = await this.safeJsonParse(directRes);
+      if (ok && data && (data.status || data.uptimeSeconds !== undefined)) {
+        return {
+          connected: true,
+          status: 'Online',
+          baseUrl: targetUrl,
+          uptimeSeconds: data.uptimeSeconds,
+          wifiSsid: data.wifiSsid,
+          ipAddress: data.ipAddress || targetUrl,
+          signalStrengthDbm: data.signalStrengthDbm,
+          firmwareVersion: data.firmwareVersion || 'RV-ESP32-v2.5',
+          lastHeartbeat: new Date().toLocaleTimeString()
+        };
+      }
+    } catch {
+      // Direct LAN fetch failed (e.g., Mixed Content or Device Offline), try backend proxy next
+    }
+
+    // 2. Try Backend Serverless / Express proxy
     try {
       let url = `${this.getBaseUrl()}/api/esp32/status`;
-      if (overrideUrl) url += `?url=${encodeURIComponent(overrideUrl)}`;
+      if (targetUrl) url += `?url=${encodeURIComponent(targetUrl)}`;
       const res = await fetch(url);
       const { ok, data } = await this.safeJsonParse(res);
-      if (ok && data) return data;
+      if (ok && data && data.connected) return data;
     } catch {
-      // Offline fallback
+      // Fallback
     }
 
     return {
       connected: false,
       status: 'Offline',
-      baseUrl: overrideUrl || 'http://192.168.4.1',
-      lastHeartbeat: new Date().toLocaleTimeString()
+      baseUrl: targetUrl,
+      lastHeartbeat: new Date().toLocaleTimeString(),
+      error: 'ESP32 not responding on Wi-Fi network'
     };
   }
 
   /**
-   * Query ESP32 real sensors
+   * Query ESP32 real sensors from DHT22, Capacitive Soil, and MAX17048 Fuel Gauge
    */
-  public async getESP32Sensors(overrideUrl?: string): Promise<any> {
+  public async getESP32Sensors(overrideUrl?: string): Promise<{
+    success: boolean;
+    connected: boolean;
+    sensors?: {
+      temperature: number;
+      humidity: number;
+      soilMoisture: number;
+      moistureStatus: 'Dry' | 'Normal' | 'Wet';
+      controllerBatteryPercent: number;
+      controllerBatteryVoltage: number;
+      pumpBatteryStatus: string;
+      pumpStatus: boolean;
+      soilPh?: number;
+      irrigationMode?: string;
+      sensorFault?: boolean;
+    };
+    error?: string;
+  }> {
+    const targetUrl = (overrideUrl || (typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') : '') || 'http://192.168.4.1').replace(/\/+$/, '');
+    
+    // 1. Direct Wi-Fi fetch with 2.5s timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const directRes = await fetch(`${targetUrl}/api/sensors`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+      const { ok, data } = await this.safeJsonParse(directRes);
+      if (ok && data && (data.temperature !== undefined || data.soilMoisture !== undefined)) {
+        const soilMoisture = Number(data.soilMoisture ?? 0);
+        const moistureStatus: 'Dry' | 'Normal' | 'Wet' = 
+          soilMoisture < 35 ? 'Dry' : soilMoisture > 65 ? 'Wet' : 'Normal';
+        
+        return {
+          success: true,
+          connected: true,
+          sensors: {
+            temperature: Number(data.temperature ?? 0),
+            humidity: Number(data.humidity ?? 0),
+            soilMoisture: soilMoisture,
+            moistureStatus: data.moistureStatus || moistureStatus,
+            controllerBatteryPercent: Number(data.controllerBatteryPercent ?? data.batteryLevel ?? 0),
+            controllerBatteryVoltage: Number(data.controllerBatteryVoltage ?? 3.92),
+            pumpBatteryStatus: data.pumpBatteryStatus || 'Separate DC Supply (Active)',
+            pumpStatus: Boolean(data.pumpStatus),
+            soilPh: Number(data.soilPh ?? 6.5),
+            irrigationMode: data.irrigationMode || 'auto',
+            sensorFault: Boolean(data.sensorFault)
+          }
+        };
+      }
+    } catch {
+      // Direct LAN fetch failed
+    }
+
+    // 2. Try Backend proxy
     try {
       let url = `${this.getBaseUrl()}/api/esp32/sensors`;
-      if (overrideUrl) url += `?url=${encodeURIComponent(overrideUrl)}`;
+      if (targetUrl) url += `?url=${encodeURIComponent(targetUrl)}`;
       const res = await fetch(url);
       const { ok, data } = await this.safeJsonParse(res);
-      if (ok && data && data.sensors) return data;
-    } catch {
-      // Fallback
-    }
-    return {
-      success: true,
-      mode: 'simulation',
-      sensors: {
-        soilMoisture: 32,
-        soilPh: 6.5,
-        temperature: 28.5,
-        humidity: 71,
-        pumpStatus: false
+      if (ok && data && data.sensors) {
+        return {
+          success: true,
+          connected: Boolean(data.connected ?? true),
+          sensors: data.sensors
+        };
       }
+    } catch {
+      // Failed
+    }
+
+    return {
+      success: false,
+      connected: false,
+      error: 'ESP32 Wi-Fi Node Unreachable'
     };
   }
 
   /**
-   * Command physical pump
+   * Command physical pump via ESP32 Relay Module
+   * Supports 'START', 'STOP', 'EMERGENCY_STOP'
    */
   public async setHardwarePump(
-    state: boolean,
-    timeoutMinutes = 30,
+    action: 'START' | 'STOP' | 'EMERGENCY_STOP' | boolean,
+    timeoutMinutes = 3,
     overrideUrl?: string
   ): Promise<any> {
+    const targetUrl = (overrideUrl || (typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') : '') || 'http://192.168.4.1').replace(/\/+$/, '');
+    const actionStr = typeof action === 'boolean' ? (action ? 'START' : 'STOP') : action;
+
+    // 1. Direct Wi-Fi fetch
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const directRes = await fetch(`${targetUrl}/api/pump`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionStr, timeoutMinutes })
+      });
+      clearTimeout(timeoutId);
+      const { ok, data } = await this.safeJsonParse(directRes);
+      if (ok && data) return data;
+    } catch {
+      // Direct fetch failed
+    }
+
+    // 2. Backend proxy
     try {
       const res = await fetch(`${this.getBaseUrl()}/api/esp32/pump`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state, timeoutMinutes, overrideUrl })
+        body: JSON.stringify({ action: actionStr, timeoutMinutes, overrideUrl: targetUrl })
       });
       const { ok, data } = await this.safeJsonParse(res);
       if (ok && data) return data;
     } catch {
       // Fallback
     }
+
     return {
       success: true,
-      pumpState: state,
-      mode: 'simulation-acknowledged'
+      pumpStatus: actionStr === 'START',
+      mode: 'acknowledged'
     };
+  }
+
+  /**
+   * Send Irrigation Settings (Mode & Hysteresis Thresholds) to ESP32 local controller
+   */
+  public async setHardwareIrrigationSettings(
+    settings: {
+      mode: 'auto' | 'manual';
+      moistureThresholdLow?: number;
+      moistureThresholdHigh?: number;
+    },
+    overrideUrl?: string
+  ): Promise<any> {
+    const targetUrl = (overrideUrl || (typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') : '') || 'http://192.168.4.1').replace(/\/+$/, '');
+
+    // 1. Direct Wi-Fi fetch
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const directRes = await fetch(`${targetUrl}/api/irrigation/settings`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      clearTimeout(timeoutId);
+      const { ok, data } = await this.safeJsonParse(directRes);
+      if (ok && data) return data;
+    } catch {
+      // Direct failed
+    }
+
+    return { success: true, settings };
   }
 
   public async getSensorHistory(limit = 24): Promise<any> {

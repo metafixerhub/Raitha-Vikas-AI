@@ -25,6 +25,7 @@ import {
   MULTI_FARM_FIELDS
 } from '../data/mockData';
 import { speechService } from '../services/speechService';
+import { apiService } from '../services/apiService';
 
 interface FarmState {
   // Navigation
@@ -95,8 +96,14 @@ interface FarmState {
 
   // ESP32 Telemetry & Connection
   esp32: ESP32DeviceState;
-  connectESP32: () => Promise<boolean>;
+  esp32Url: string;
+  setEsp32Url: (url: string) => void;
+  isHardwareMode: boolean;
+  setHardwareMode: (live: boolean) => void;
+  connectESP32: (targetUrl?: string) => Promise<boolean>;
   disconnectESP32: () => void;
+  fetchESP32Telemetry: () => Promise<void>;
+  emergencyStopPump: () => Promise<void>;
   isSimulatingLiveFeed: boolean;
   toggleSimulationFeed: () => void;
 
@@ -168,18 +175,24 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   },
   lastSyncTimestamp: 'Live Stream Synchronized',
 
-  // Sensor telemetry with sample soil pH: 6.5 (Slightly Acidic)
+  // Sensor telemetry with live hardware readings (DHT22, Soil, MAX17048)
   sensors: {
     soilMoisture: 32,
+    moistureStatus: 'Dry',
     soilPh: 6.5,
     soilPhStatus: 'Slightly Acidic',
     temperature: 28.5,
     humidity: 71,
     pumpStatus: false,
-    batteryLevel: 78,
+    controllerBatteryPercent: 84,
+    controllerBatteryVoltage: 3.92,
+    pumpBatteryStatus: 'Dedicated DC Supply (Active)',
+    batteryLevel: 84,
     solarStatus: 'Charging',
     solarWatts: 42,
-    timestamp: 'Just now (Simulated)'
+    timestamp: 'Standby',
+    isLiveHardware: false,
+    sensorFault: false
   },
   setSensors: (data) => set((state) => ({ sensors: { ...state.sensors, ...data } })),
 
@@ -236,6 +249,13 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   irrigationMode: 'auto',
   setIrrigationMode: (mode) => {
     set({ irrigationMode: mode });
+    if (get().isHardwareMode && (mode === 'auto' || mode === 'manual')) {
+      apiService.setHardwareIrrigationSettings({
+        mode,
+        moistureThresholdLow: get().moistureThresholdLow,
+        moistureThresholdHigh: get().moistureThresholdHigh
+      }, get().esp32Url).catch(console.error);
+    }
     get().triggerVoiceAnnouncement(
       `Irrigation mode switched to ${mode.toUpperCase()}.`,
       'irrigation',
@@ -244,7 +264,16 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   },
   moistureThresholdLow: 35,
   moistureThresholdHigh: 70,
-  setMoistureThresholds: (low, high) => set({ moistureThresholdLow: low, moistureThresholdHigh: high }),
+  setMoistureThresholds: (low, high) => {
+    set({ moistureThresholdLow: low, moistureThresholdHigh: high });
+    if (get().isHardwareMode) {
+      apiService.setHardwareIrrigationSettings({
+        mode: get().irrigationMode === 'auto' ? 'auto' : 'manual',
+        moistureThresholdLow: low,
+        moistureThresholdHigh: high
+      }, get().esp32Url).catch(console.error);
+    }
+  },
 
   wateringLogs: INITIAL_WATERING_HISTORY,
   activeWateringSession: null,
@@ -254,6 +283,10 @@ export const useFarmStore = create<FarmState>((set, get) => ({
     const newState = explicitState !== undefined ? explicitState : !currentState;
 
     if (newState === currentState) return;
+
+    if (get().isHardwareMode) {
+      apiService.setHardwarePump(newState ? 'START' : 'STOP', 3, get().esp32Url).catch(console.error);
+    }
 
     if (newState) {
       set((state) => ({
@@ -301,6 +334,24 @@ export const useFarmStore = create<FarmState>((set, get) => ({
         'आपकी मिट्टी की नमी सामान्य हो गई है। सिंचाई रोक दी गई है।'
       );
     }
+  },
+
+  emergencyStopPump: async () => {
+    if (get().isHardwareMode) {
+      await apiService.setHardwarePump('EMERGENCY_STOP', 0, get().esp32Url).catch(console.error);
+    }
+    set((state) => ({
+      sensors: { ...state.sensors, pumpStatus: false },
+      irrigationMode: 'manual',
+      activeWateringSession: null
+    }));
+    get().triggerVoiceAnnouncement(
+      'EMERGENCY STOP ACTIVATED! Irrigation pump halted immediately.',
+      'irrigation',
+      'critical',
+      'ತುರ್ತು ನಿಲುಗಡೆ ಸಕ್ರಿಯವಾಗಿದೆ! ನೀರಾವರಿ ಪಂಪ್ ತಕ್ಷಣವೇ ನಿಲ್ಲಿಸಲಾಗಿದೆ.',
+      'आपातकालीन रोक सक्रिय! सिंचाई पंप तुरंत बंद कर दिया गया है।'
+    );
   },
 
   // Disease AI
@@ -424,45 +475,135 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   // Weather
   weather: INITIAL_WEATHER,
 
-  // ESP32 State
+  // ESP32 State & Live Wi-Fi Node Link
+  esp32Url: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || 'http://192.168.4.1' : 'http://192.168.4.1',
+  setEsp32Url: (url: string) => {
+    if (typeof window !== 'undefined') localStorage.setItem('esp32_ip', url);
+    set({ esp32Url: url });
+  },
+  isHardwareMode: typeof window !== 'undefined' ? localStorage.getItem('is_hardware_mode') === 'true' : false,
+  setHardwareMode: (live: boolean) => {
+    if (typeof window !== 'undefined') localStorage.setItem('is_hardware_mode', String(live));
+    set({ isHardwareMode: live });
+    if (live) {
+      get().connectESP32();
+    } else {
+      set((state) => ({
+        esp32: { ...state.esp32, connected: false, status: 'Demo Mode' },
+        sensors: { ...state.sensors, isLiveHardware: false }
+      }));
+    }
+  },
   esp32: {
     connected: false,
     isSimulated: true,
     status: 'Demo Mode',
-    ipAddress: '192.168.1.145 (Standby)',
-    port: 8080,
+    ipAddress: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || '192.168.4.1' : '192.168.4.1',
+    port: 80,
     macAddress: '24:6F:28:B2:7C:1E',
     signalStrengthDbm: -64,
-    firmwareVersion: 'RV-ESP32-v2.4.1 (Simulated)',
-    lastHeartbeat: 'Just now'
+    firmwareVersion: 'RV-ESP32-v2.5',
+    lastHeartbeat: 'Standby'
   },
-  connectESP32: async () => {
-    set((state) => ({
-      esp32: { ...state.esp32, status: 'Searching...' }
-    }));
-
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+  connectESP32: async (targetUrl?: string) => {
+    const url = targetUrl || get().esp32Url;
+    if (targetUrl) get().setEsp32Url(targetUrl);
 
     set((state) => ({
-      esp32: {
-        ...state.esp32,
-        connected: true,
-        status: 'Connected',
-        lastHeartbeat: 'Just now (Simulated Feed Active)'
-      }
+      esp32: { ...state.esp32, status: 'Searching...', errorMessage: undefined }
     }));
 
-    get().triggerVoiceAnnouncement(
-      'ESP32 AI Expansion Board simulator linked. Telemetry stream active.',
-      'system',
-      'info'
-    );
-    return true;
+    const status = await apiService.getESP32Status(url);
+    if (status.connected) {
+      set((state) => ({
+        esp32: {
+          ...state.esp32,
+          connected: true,
+          status: 'Connected',
+          ipAddress: status.ipAddress || url,
+          signalStrengthDbm: status.signalStrengthDbm || -55,
+          firmwareVersion: status.firmwareVersion || 'RV-ESP32-v2.5',
+          lastHeartbeat: 'Connected via Wi-Fi',
+          lastSuccessfulUpdate: new Date().toLocaleTimeString(),
+          errorMessage: undefined
+        }
+      }));
+      await get().fetchESP32Telemetry();
+      get().triggerVoiceAnnouncement(
+        'ESP32 WROOM-32 Smart Node connected via Wi-Fi.',
+        'system',
+        'info'
+      );
+      return true;
+    } else {
+      set((state) => ({
+        esp32: {
+          ...state.esp32,
+          connected: false,
+          status: 'Disconnected',
+          errorMessage: status.error || 'ESP32 Wi-Fi Node unreachable at ' + url
+        },
+        sensors: {
+          ...state.sensors,
+          isLiveHardware: false
+        }
+      }));
+      return false;
+    }
   },
   disconnectESP32: () => {
     set((state) => ({
-      esp32: { ...state.esp32, connected: false, status: 'Demo Mode' }
+      isHardwareMode: false,
+      esp32: { ...state.esp32, connected: false, status: 'Demo Mode' },
+      sensors: { ...state.sensors, isLiveHardware: false }
     }));
+  },
+  fetchESP32Telemetry: async () => {
+    const url = get().esp32Url;
+    const res = await apiService.getESP32Sensors(url);
+    if (res.success && res.sensors) {
+      const s = res.sensors;
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      set((state) => ({
+        sensors: {
+          ...state.sensors,
+          temperature: s.temperature,
+          humidity: s.humidity,
+          soilMoisture: s.soilMoisture,
+          moistureStatus: s.moistureStatus,
+          controllerBatteryPercent: s.controllerBatteryPercent,
+          controllerBatteryVoltage: s.controllerBatteryVoltage,
+          pumpBatteryStatus: s.pumpBatteryStatus,
+          pumpStatus: s.pumpStatus,
+          soilPh: s.soilPh ?? state.sensors.soilPh,
+          batteryLevel: s.controllerBatteryPercent,
+          timestamp: now,
+          isLiveHardware: true,
+          sensorFault: s.sensorFault || false
+        },
+        esp32: {
+          ...state.esp32,
+          connected: true,
+          status: 'Connected',
+          lastSuccessfulUpdate: now,
+          errorMessage: undefined
+        }
+      }));
+    } else {
+      // Disconnected: show appropriate connection warning instead of presenting old readings as live!
+      set((state) => ({
+        sensors: {
+          ...state.sensors,
+          isLiveHardware: false
+        },
+        esp32: {
+          ...state.esp32,
+          connected: false,
+          status: 'Disconnected',
+          errorMessage: res.error || 'Connection lost to ESP32 node. Telemetry paused.'
+        }
+      }));
+    }
   },
   isSimulatingLiveFeed: true,
   toggleSimulationFeed: () => set((state) => ({ isSimulatingLiveFeed: !state.isSimulatingLiveFeed })),
@@ -488,10 +629,19 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   isAppLoading: true,
   setIsAppLoading: (isAppLoading) => set({ isAppLoading }),
 
-  // Heartbeat simulation tick
+  // Heartbeat sensor tick (Live Hardware polling or Demo simulation)
   simulateSensorTick: () => {
     const state = get();
-    if (!state.isSimulatingLiveFeed || state.isOfflineMode) return;
+    if (state.isOfflineMode) return;
+
+    // When in Live Hardware Mode: Fetch actual readings from ESP32
+    if (state.isHardwareMode) {
+      get().fetchESP32Telemetry();
+      return;
+    }
+
+    // In Demonstration Mode: Run educational simulation
+    if (!state.isSimulatingLiveFeed) return;
 
     let moisture = state.sensors.soilMoisture;
     let ph = state.sensors.soilPh;
@@ -537,16 +687,21 @@ export const useFarmStore = create<FarmState>((set, get) => ({
     else if (ph <= 8.2) phStatus = 'Slightly Alkaline';
     else phStatus = 'Alkaline';
 
+    // Derive moisture status: Dry, Normal, Wet
+    const moistureStatus: 'Dry' | 'Normal' | 'Wet' = 
+      moisture < 35 ? 'Dry' : moisture > 65 ? 'Wet' : 'Normal';
+
     set({
       sensors: {
         ...state.sensors,
         soilMoisture: moisture,
+        moistureStatus: moistureStatus,
         soilPh: ph,
         soilPhStatus: phStatus,
         temperature: temp,
         humidity: humidity,
         solarWatts: solarWatts,
-        timestamp: 'Just now (Simulated)'
+        timestamp: 'Demo Simulation'
       }
     });
   }

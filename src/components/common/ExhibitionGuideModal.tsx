@@ -23,12 +23,12 @@ export const ExhibitionGuideModal: React.FC = () => {
   if (!exhibitionModalOpen) return null;
 
   const hardwareFeatures = [
-    { name: 'Soil Moisture Sensor', status: 'Real Hardware Sensor (ADC1 GPIO 34)', icon: Droplets, color: 'text-blue-500' },
-    { name: 'Temperature & Humidity (DHT22)', status: 'Real Sensor Probe (GPIO 4)', icon: Activity, color: 'text-amber-500' },
-    { name: 'Soil pH Sensor Probe', status: 'Real Probe in Prepared Soil-Water Sample (ADC)', icon: Sparkles, color: 'text-emerald-500' },
-    { name: 'Submersible Water Pump', status: 'Real 5V Mini Pump via Optoisolated Relay (GPIO 16)', icon: Droplets, color: 'text-sky-500' },
-    { name: 'Speaker & Announcements', status: 'Browser TTS + Real ESP32 I2S DAC Module (GPIO 25, 26, 22)', icon: Volume2, color: 'text-purple-500' },
-    { name: 'Solar Battery Telemetry', status: 'Real Voltage Divider ADC (GPIO 35)', icon: Sun, color: 'text-yellow-500' },
+    { name: 'Capacitive Soil Moisture Sensor', status: 'Real Corrosion-Resistant Probe (ADC1 GPIO 34)', icon: Droplets, color: 'text-blue-500' },
+    { name: 'DHT22 Temp & Humidity Sensor', status: 'Real Digital Environmental Sensor (GPIO 4)', icon: Activity, color: 'text-amber-500' },
+    { name: '5V Optoisolated Relay Module', status: 'Real Mini DC Pump Actuation (GPIO 27)', icon: ShieldCheck, color: 'text-emerald-500' },
+    { name: 'MAX17048 Battery Fuel Gauge', status: 'Real I2C Li-ion Fuel Gauge & Voltage Telemetry (0x36)', icon: Sun, color: 'text-yellow-500' },
+    { name: 'Dedicated DC Pump Supply', status: 'Independent Battery for Motor to Prevent Controller Brownouts', icon: Sparkles, color: 'text-sky-500' },
+    { name: '18650 Li-ion Pack + JX-887Y', status: '3.7V BMS Protected Cell + 5V 2A Boost Power Rail', icon: Layers, color: 'text-teal-500' },
   ];
 
   const softwareFeatures = [

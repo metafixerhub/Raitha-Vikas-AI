@@ -37,7 +37,7 @@ export const Sidebar: React.FC = () => {
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', regionalLabel: 'ಮುಖಪುಟ', icon: Home },
-    { id: 'assistant', label: 'AI Farm Advisor', regionalLabel: 'ಕೃಷಿ AI ಸಲಹೆಗಾರ', icon: Bot, badge: 'Gemini' },
+    { id: 'assistant', label: 'AI Farm Advisor', regionalLabel: 'ಕೃಷಿ AI ಸಲಹೆಗಾರ', icon: Bot, badge: 'AI' },
     { id: 'disease', label: 'Crop Disease AI', regionalLabel: 'ಬೆಳೆ ರೋಗ ಪತ್ತೆ', icon: Sprout, badge: 'AI' },
     { id: 'irrigation', label: 'Irrigation Control', regionalLabel: 'ನೀರಾವರಿ ನಿಯಂತ್ರಣ', icon: Droplet, badge: sensors.pumpStatus ? 'ON' : undefined },
     { id: 'sensors', label: 'Sensor Monitoring', regionalLabel: 'ಸಂವೇದಕಗಳು (pH+)', icon: LineChart },
@@ -142,8 +142,8 @@ export const Sidebar: React.FC = () => {
               <span>Soil pH & Moisture Calibrated</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-aiBlue-400" />
-              <span>Gemini AI Agronomy Live</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>Smart AI Agronomy Live</span>
             </div>
           </div>
         </div>

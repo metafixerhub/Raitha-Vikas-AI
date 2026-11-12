@@ -61,11 +61,11 @@ export const IrrigationControl: React.FC = () => {
           <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold">Hardware Relay Controller Architecture: </span>
-            The mini DC water pump is switched via an optoisolated 5V Single-Channel Relay Module (GPIO 27) and powered by an independent DC battery. Automatic watering runs autonomously on the ESP32 even if Wi-Fi disconnects.
+            The mini DC water pump is switched via an optoisolated Single-Channel Relay Module (GPIO 5) and powered by an independent DC battery. Automatic watering runs autonomously on the ESP32 even if Wi-Fi disconnects.
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full bg-sky-200/60 dark:bg-sky-900/60 text-sky-900 dark:text-sky-200 font-bold shrink-0">
-          Relay: GPIO 27 &bull; 5V Isolated
+          Relay: GPIO 5 (D5) &bull; Optoisolated
         </span>
       </div>
 
@@ -140,16 +140,14 @@ export const IrrigationControl: React.FC = () => {
               <div className="flex items-center gap-2 max-w-sm mx-auto">
                 <button
                   onClick={() => togglePump(true)}
-                  disabled={sensors.pumpStatus}
-                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1"
+                  className={`flex-1 py-2 rounded-xl text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1 ${sensors.pumpStatus ? 'bg-emerald-600 ring-2 ring-emerald-400' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                 >
                   <Power className="w-3.5 h-3.5" />
                   <span>Pump ON</span>
                 </button>
                 <button
                   onClick={() => togglePump(false)}
-                  disabled={!sensors.pumpStatus}
-                  className="flex-1 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1"
+                  className={`flex-1 py-2 rounded-xl text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1 ${!sensors.pumpStatus ? 'bg-slate-700 ring-2 ring-slate-400' : 'bg-slate-700 hover:bg-slate-800'}`}
                 >
                   <Power className="w-3.5 h-3.5" />
                   <span>Pump OFF</span>

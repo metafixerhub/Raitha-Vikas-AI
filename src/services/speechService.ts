@@ -71,7 +71,14 @@ class SpeechService {
     try {
       this.synth.cancel(); // clear previous utterance
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Strip markdown symbols (*, **, #, _, `, etc.) so speech doesn't pronounce "asterisk"
+      const cleanText = text
+        .replace(/[*#_`~>]/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       if (this.selectedVoice) {
         utterance.voice = this.selectedVoice;
       }

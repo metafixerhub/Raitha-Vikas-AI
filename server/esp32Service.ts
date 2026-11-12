@@ -14,15 +14,18 @@ export interface ESP32StatusResponse {
 export interface ESP32SensorResponse {
   connected: boolean;
   soilMoisture: number;
-  soilPh: number;
+  soilPh?: number;
   temperature: number;
   humidity: number;
-  batteryLevel: number;
-  solarWatts: number;
+  batteryLevel?: number;
+  solarWatts?: number;
   pumpStatus: boolean;
   timestamp: string;
   source: 'ESP32 Hardware' | 'Simulated' | 'Disconnected';
   error?: string;
+  sensorFault?: boolean;
+  rawSoilADC?: number;
+  operatingMode?: string;
 }
 
 class ESP32Service {
@@ -108,14 +111,17 @@ class ESP32Service {
       return {
         connected: true,
         soilMoisture: Number(data.soilMoisture ?? 0),
-        soilPh: Number(data.soilPh ?? 7.0),
+        soilPh: data.soilPh !== undefined ? Number(data.soilPh) : undefined,
         temperature: Number(data.temperature ?? 0),
         humidity: Number(data.humidity ?? 0),
-        batteryLevel: Number(data.batteryLevel ?? 0),
-        solarWatts: Number(data.solarWatts ?? 0),
+        batteryLevel: data.batteryLevel !== undefined ? Number(data.batteryLevel) : undefined,
+        solarWatts: data.solarWatts !== undefined ? Number(data.solarWatts) : undefined,
         pumpStatus: Boolean(data.pumpStatus),
         timestamp: new Date().toLocaleTimeString(),
-        source: 'ESP32 Hardware'
+        source: 'ESP32 Hardware',
+        sensorFault: Boolean(data.sensorFault),
+        rawSoilADC: data.rawSoilADC !== undefined ? Number(data.rawSoilADC) : undefined,
+        operatingMode: data.operatingMode || data.irrigationMode || 'auto'
       };
     } catch (err: any) {
       throw new Error(`Failed to query ESP32 sensors: ${err.message}`);
@@ -124,9 +130,10 @@ class ESP32Service {
 
   /**
    * Command pump ON or OFF on real ESP32 with safety checks
+   * Supports 'START', 'STOP', 'EMERGENCY_STOP' or boolean
    */
   public async setPumpState(
-    state: boolean,
+    actionOrState: boolean | string,
     timeoutMinutes = 30,
     overrideUrl?: string
   ): Promise<{ success: boolean; pumpStatus: boolean; message: string }> {
@@ -135,10 +142,9 @@ class ESP32Service {
       throw new Error('Cannot command physical pump: ESP32_BASE_URL is not configured.');
     }
 
-    // Safety validation
-    if (typeof state !== 'boolean') {
-      throw new Error('Invalid pump command. State must be a boolean.');
-    }
+    const actionStr = typeof actionOrState === 'string'
+      ? actionOrState.toUpperCase()
+      : (actionOrState ? 'START' : 'STOP');
 
     // Timeout safety clamp
     const safeTimeout = Math.min(60, Math.max(1, timeoutMinutes));
@@ -152,7 +158,7 @@ class ESP32Service {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: state ? 'START' : 'STOP',
+          action: actionStr,
           timeoutMinutes: safeTimeout,
           timestamp: Date.now()
         }),
@@ -167,8 +173,8 @@ class ESP32Service {
       const data = await res.json();
       return {
         success: true,
-        pumpStatus: Boolean(data.pumpStatus ?? state),
-        message: data.message || `Pump successfully turned ${state ? 'ON' : 'OFF'}.`
+        pumpStatus: Boolean(data.pumpStatus ?? (actionStr === 'START' || actionStr === 'ON')),
+        message: data.message || `Pump successfully commanded to ${actionStr}.`
       };
     } catch (err: any) {
       throw new Error(`Hardware pump relay command failed: ${err.message}`);

@@ -347,7 +347,7 @@ Farmer Question: ${prompt}`
   }
 
   /**
-   * Query ESP32 real sensors from DHT22, Capacitive Soil, and MAX17048 Fuel Gauge
+   * Query ESP32 real sensors from DHT22 and Capacitive Soil Sensor
    */
   public async getESP32Sensors(overrideUrl?: string): Promise<{
     success: boolean;
@@ -357,13 +357,14 @@ Farmer Question: ${prompt}`
       humidity: number;
       soilMoisture: number;
       moistureStatus: 'Dry' | 'Normal' | 'Wet';
-      controllerBatteryPercent: number;
-      controllerBatteryVoltage: number;
-      pumpBatteryStatus: string;
+      controllerBatteryPercent?: number;
+      controllerBatteryVoltage?: number;
+      pumpBatteryStatus?: string;
       pumpStatus: boolean;
       soilPh?: number;
       irrigationMode?: string;
       sensorFault?: boolean;
+      rawSoilADC?: number;
     };
     error?: string;
   }> {
@@ -392,13 +393,14 @@ Farmer Question: ${prompt}`
             humidity: Number(data.humidity ?? 0),
             soilMoisture: soilMoisture,
             moistureStatus: data.moistureStatus || moistureStatus,
-            controllerBatteryPercent: Number(data.controllerBatteryPercent ?? data.batteryLevel ?? 0),
-            controllerBatteryVoltage: Number(data.controllerBatteryVoltage ?? 3.92),
+            controllerBatteryPercent: data.controllerBatteryPercent !== undefined ? Number(data.controllerBatteryPercent) : undefined,
+            controllerBatteryVoltage: data.controllerBatteryVoltage !== undefined ? Number(data.controllerBatteryVoltage) : undefined,
             pumpBatteryStatus: data.pumpBatteryStatus || 'Separate DC Supply (Active)',
             pumpStatus: Boolean(data.pumpStatus),
-            soilPh: Number(data.soilPh ?? 6.5),
-            irrigationMode: data.irrigationMode || 'auto',
-            sensorFault: Boolean(data.sensorFault)
+            soilPh: data.soilPh !== undefined ? Number(data.soilPh) : undefined,
+            irrigationMode: data.irrigationMode || data.operatingMode || 'auto',
+            sensorFault: Boolean(data.sensorFault),
+            rawSoilADC: data.rawSoilADC !== undefined ? Number(data.rawSoilADC) : undefined
           }
         };
       }
@@ -484,9 +486,12 @@ Farmer Question: ${prompt}`
    */
   public async setHardwareIrrigationSettings(
     settings: {
-      mode: 'auto' | 'manual';
+      mode: 'auto' | 'manual' | 'scheduled';
       moistureThresholdLow?: number;
       moistureThresholdHigh?: number;
+      soilDryRaw?: number;
+      soilWetRaw?: number;
+      timeoutMinutes?: number;
     },
     overrideUrl?: string
   ): Promise<any> {

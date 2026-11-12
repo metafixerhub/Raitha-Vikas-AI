@@ -14,7 +14,8 @@ import {
   Volume2, 
   ScanLine, 
   Store, 
-  CloudSun 
+  CloudSun,
+  Zap 
 } from 'lucide-react';
 
 export const ExhibitionGuideModal: React.FC = () => {
@@ -25,8 +26,8 @@ export const ExhibitionGuideModal: React.FC = () => {
   const hardwareFeatures = [
     { name: 'Capacitive Soil Moisture Sensor', status: 'Real Corrosion-Resistant Probe (ADC1 GPIO 34)', icon: Droplets, color: 'text-blue-500' },
     { name: 'DHT22 Temp & Humidity Sensor', status: 'Real Digital Environmental Sensor (GPIO 4)', icon: Activity, color: 'text-amber-500' },
-    { name: '5V Optoisolated Relay Module', status: 'Real Mini DC Pump Actuation (GPIO 27)', icon: ShieldCheck, color: 'text-emerald-500' },
-    { name: 'MAX17048 Battery Fuel Gauge', status: 'Real I2C Li-ion Fuel Gauge & Voltage Telemetry (0x36)', icon: Sun, color: 'text-yellow-500' },
+    { name: 'Optoisolated Relay Module', status: 'Real Mini DC Pump Actuation (GPIO 5 / D5)', icon: ShieldCheck, color: 'text-emerald-500' },
+    { name: 'Autonomous Irrigation Engine', status: 'On-Chip Hysteresis Closed-Loop & Safety Watchdog', icon: Zap, color: 'text-yellow-500' },
     { name: 'Dedicated DC Pump Supply', status: 'Independent Battery for Motor to Prevent Controller Brownouts', icon: Sparkles, color: 'text-sky-500' },
     { name: '18650 Li-ion Pack + JX-887Y', status: '3.7V BMS Protected Cell + 5V 2A Boost Power Rail', icon: Layers, color: 'text-teal-500' },
   ];

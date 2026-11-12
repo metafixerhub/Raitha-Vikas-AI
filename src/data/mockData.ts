@@ -808,9 +808,9 @@ export const INITIAL_WATERING_HISTORY: WateringLog[] = [
 export const INITIAL_ANNOUNCEMENTS = [
   {
     id: 'voice-1',
-    text: 'Good morning farmer! Soil moisture is currently 32%. Soil pH is 6.5, slightly acidic.',
-    kannadaText: 'ಶುಭೋದಯ ರೈತ ಬಾಂಧವರೇ! ಮಣ್ಣಿನ ತೇವಾಂಶ ೩೨% ಇದೆ. ಮಣ್ಣಿನ ಪಿಎಚ್ ೬.೫ ರಷ್ಟಿದೆ.',
-    hindiText: 'शुभ प्रभात किसान भाई! मिट्टी की नमी 32% है और पीएच मान 6.5 है।',
+    text: 'Good morning farmer! Soil moisture is currently 32%. Irrigation pump is in standby.',
+    kannadaText: 'ಶುಭೋದಯ ರೈತ ಬಾಂಧವರೇ! ಮಣ್ಣಿನ ತೇವಾಂಶ ೩೨% ಇದೆ. ನೀರಾವರಿ ಪಂಪ್ ಸಿದ್ಧ ಸ್ಥಿತಿಯಲ್ಲಿದೆ.',
+    hindiText: 'शुभ प्रभात किसान भाई! मिट्टी की नमी 32% है। सिंचाई पंप तैयार स्थिति में है।',
     category: 'system' as const,
     timestamp: '07:00 AM',
     severity: 'info' as const,

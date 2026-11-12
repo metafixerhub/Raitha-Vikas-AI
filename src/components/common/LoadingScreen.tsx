@@ -33,9 +33,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
       hi: 'लाइव मंडी भाव प्राप्त किए जा रहे हैं...'
     },
     {
-      en: 'Calibrating Gemini Agronomy Intelligence...',
-      kn: 'ಜೆಮಿನಿ ಕೃಷಿ AI ಸಹಾಯಕ ಸಿದ್ಧಗೊಳ್ಳುತ್ತಿದೆ...',
-      hi: 'जेमिनी कृषि AI सहायक तैयार हो रहा है...'
+      en: 'Calibrating Raitha Vikas Agronomy Intelligence...',
+      kn: 'ರೈತ ವಿಕಾಸ ಕೃಷಿ AI ಸಹಾಯಕ ಸಿದ್ಧಗೊಳ್ಳುತ್ತಿದೆ...',
+      hi: 'रैत विकास कृषि AI सहायक तैयार हो रहा है...'
     },
     {
       en: 'Farm Dashboard Ready!',
@@ -150,7 +150,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         {/* Subtle hardware badge */}
         <div className="mt-8 flex items-center gap-2 px-3 py-1.5 rounded-full bg-forest-950/60 border border-forest-800/40 text-[10px] text-forest-300/70">
           <Wifi className="w-3 h-3 text-fresh-400" />
-          <span>ESP32 Agri-Telemetry &bull; Gemini Agronomy Model</span>
+          <span>ESP32 Agri-Telemetry &bull; Precision Agronomy Model</span>
         </div>
 
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useFarmStore } from './store/useFarmStore';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
@@ -21,6 +21,15 @@ import { SettingsPage } from './pages/SettingsPage';
 
 export const App: React.FC = () => {
   const { activeTab, simulateSensorTick } = useFarmStore();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // When switching tabs, always reset scroll to the top so pages never open scrolled down
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [activeTab]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -69,7 +78,7 @@ export const App: React.FC = () => {
         <Sidebar />
 
         {/* Dynamic Page Content View */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 min-w-0 overflow-y-auto max-w-[1600px]">
+        <main ref={mainRef} className="flex-1 p-4 pb-28 sm:p-6 sm:pb-28 lg:p-7 lg:pb-7 min-w-0 overflow-y-auto max-w-[1600px]">
           {renderActiveTab()}
         </main>
 

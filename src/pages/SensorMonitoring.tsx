@@ -40,27 +40,23 @@ export const SensorMonitoring: React.FC = () => {
     setTimeFilter,
     isSimulatingLiveFeed, 
     toggleSimulationFeed,
-    isOfflineMode
+    isOfflineMode,
+    irrigationMode,
+    moistureThresholdLow,
+    moistureThresholdHigh
   } = useFarmStore();
 
-  const [activeMetric, setActiveMetric] = useState<'all' | 'moisture' | 'ph' | 'climate' | 'power'>('all');
+  const [activeMetric, setActiveMetric] = useState<'all' | 'moisture' | 'temperature' | 'humidity' | 'relay'>('all');
 
   const moistureValues = historicalData.map(d => d.soilMoisture);
-  const phValues = historicalData.map(d => d.soilPh || 6.5);
   const tempValues = historicalData.map(d => d.temperature);
   const humValues = historicalData.map(d => d.humidity);
-  const batteryValues = historicalData.map(d => d.batteryLevel);
 
   const stats = {
     moisture: {
       min: Math.min(...moistureValues),
       max: Math.max(...moistureValues),
       avg: Math.round(moistureValues.reduce((a, b) => a + b, 0) / moistureValues.length)
-    },
-    ph: {
-      min: Math.min(...phValues),
-      max: Math.max(...phValues),
-      avg: Number((phValues.reduce((a, b) => a + b, 0) / phValues.length).toFixed(2))
     },
     temp: {
       min: Math.min(...tempValues),
@@ -71,11 +67,6 @@ export const SensorMonitoring: React.FC = () => {
       min: Math.min(...humValues),
       max: Math.max(...humValues),
       avg: Math.round(humValues.reduce((a, b) => a + b, 0) / humValues.length)
-    },
-    battery: {
-      min: Math.min(...batteryValues),
-      max: Math.max(...batteryValues),
-      avg: Math.round(batteryValues.reduce((a, b) => a + b, 0) / batteryValues.length)
     }
   };
 
@@ -87,8 +78,8 @@ export const SensorMonitoring: React.FC = () => {
         <div className="flex items-start gap-2.5">
           <Activity className="w-4 h-4 text-emerald-600 dark:text-fresh-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold">Agricultural Telemetry Stream (Soil pH & Moisture Enabled): </span>
-            Displaying calibrated time-series telemetry. Simulated demonstration data until ESP32 MQTT broker feed is synchronized.
+            <span className="font-bold">Live Agricultural Telemetry Stream: </span>
+            Capacitive Soil Moisture (GPIO 34), DHT22 Temperature & Humidity (GPIO 4), and Optoisolated Pump Relay (GPIO 5).
           </div>
         </div>
 
@@ -122,10 +113,10 @@ export const SensorMonitoring: React.FC = () => {
         </div>
       </div>
 
-      {/* 5 Min/Max/Avg Telemetry Cards (Now including Soil pH!) */}
+      {/* 5 Real Hardware Telemetry Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
-        {/* Soil Moisture */}
+        {/* Card 1: Soil Moisture */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase">Soil Moisture</span>
@@ -137,7 +128,11 @@ export const SensorMonitoring: React.FC = () => {
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
               {sensors.soilMoisture}%
             </span>
-            <span className="text-xs text-amber-600 font-semibold">Dry Zone</span>
+            <span className={`text-xs font-semibold ${
+              sensors.soilMoisture < 35 ? 'text-amber-600' : sensors.soilMoisture > 65 ? 'text-sky-600' : 'text-emerald-600'
+            }`}>
+              {sensors.moistureStatus || (sensors.soilMoisture < 35 ? 'Dry' : sensors.soilMoisture > 65 ? 'Wet' : 'Normal')}
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-center">
             <div>
@@ -155,37 +150,35 @@ export const SensorMonitoring: React.FC = () => {
           </div>
         </div>
 
-        {/* Soil pH (NEW) */}
+        {/* Card 2: Soil Condition & Sensor Health */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Soil pH Probe</span>
-            <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center">
-              <Beaker className="w-4 h-4" />
+            <span className="text-xs font-bold text-slate-500 uppercase">Soil Condition</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
+              <Sprout className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {sensors.soilPh}
+            <span className="text-xl font-extrabold text-slate-900 dark:text-white">
+              {sensors.sensorFault ? 'Fault' : (sensors.moistureStatus || 'Normal')}
             </span>
-            <span className="text-xs text-emerald-600 font-semibold">{sensors.soilPhStatus}</span>
+            <span className={`text-xs font-semibold ${sensors.sensorFault ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {sensors.sensorFault ? 'Wiring Check' : 'GPIO 34 ADC'}
+            </span>
           </div>
-          <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-center">
-            <div>
-              <span className="text-slate-400 block text-[10px]">MIN</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.ph.min}</span>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] space-y-0.5">
+            <div className="flex justify-between text-slate-500">
+              <span>Auto-Start:</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">&le; {moistureThresholdLow}%</span>
             </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">AVG</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.ph.avg}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">MAX</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.ph.max}</span>
+            <div className="flex justify-between text-slate-500">
+              <span>Auto-Stop:</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">&ge; {moistureThresholdHigh}%</span>
             </div>
           </div>
         </div>
 
-        {/* Temperature */}
+        {/* Card 3: Temperature */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase">Temperature</span>
@@ -197,7 +190,7 @@ export const SensorMonitoring: React.FC = () => {
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
               {sensors.temperature}°C
             </span>
-            <span className="text-xs text-emerald-600 font-semibold">Optimal</span>
+            <span className="text-xs text-emerald-600 font-semibold">DHT22</span>
           </div>
           <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-center">
             <div>
@@ -215,7 +208,7 @@ export const SensorMonitoring: React.FC = () => {
           </div>
         </div>
 
-        {/* Humidity */}
+        {/* Card 4: Humidity */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase">Humidity</span>
@@ -227,7 +220,7 @@ export const SensorMonitoring: React.FC = () => {
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
               {sensors.humidity}%
             </span>
-            <span className="text-xs text-teal-600 font-semibold">Turgid</span>
+            <span className="text-xs text-teal-600 font-semibold">DHT22</span>
           </div>
           <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-center">
             <div>
@@ -245,32 +238,29 @@ export const SensorMonitoring: React.FC = () => {
           </div>
         </div>
 
-        {/* Solar Battery */}
+        {/* Card 5: Pump Relay Unit */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">Solar Battery</span>
-            <div className="w-8 h-8 rounded-xl bg-yellow-50 dark:bg-yellow-950 text-yellow-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-500 uppercase">Pump Actuator</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              sensors.pumpStatus ? 'bg-emerald-100 text-emerald-600 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+            }`}>
               <Zap className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-              {sensors.batteryLevel}%
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
+              {sensors.pumpStatus ? 'PUMP ON' : 'PUMP OFF'}
             </span>
-            <span className="text-xs text-amber-600 font-semibold">{sensors.solarWatts}W</span>
           </div>
-          <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-center">
-            <div>
-              <span className="text-slate-400 block text-[10px]">MIN</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.battery.min}%</span>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] space-y-0.5">
+            <div className="flex justify-between text-slate-500">
+              <span>Mode:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase">{irrigationMode}</span>
             </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">AVG</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.battery.avg}%</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">MAX</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">{stats.battery.max}%</span>
+            <div className="flex justify-between text-slate-500">
+              <span>Relay:</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">GPIO 5 (Opto)</span>
             </div>
           </div>
         </div>
@@ -288,14 +278,14 @@ export const SensorMonitoring: React.FC = () => {
               Sensor Telemetry Historical Trend & pH Analysis
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              High-resolution time-series sensor telemetry including calibrated soil pH
+              High-resolution time-series sensor telemetry and relay actuator state
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Metric filters */}
             <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-800 flex text-xs font-semibold">
-              {(['all', 'moisture', 'ph', 'climate', 'power'] as const).map((m) => (
+              {(['all', 'moisture', 'temperature', 'humidity', 'relay'] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setActiveMetric(m)}
@@ -305,7 +295,7 @@ export const SensorMonitoring: React.FC = () => {
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  {m === 'ph' ? 'Soil pH' : m}
+                  {m === 'relay' ? 'Pump Relay' : m}
                 </button>
               ))}
             </div>
@@ -337,10 +327,6 @@ export const SensorMonitoring: React.FC = () => {
                 <linearGradient id="moistureGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0.0}/>
-                </linearGradient>
-                <linearGradient id="phGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0}/>
                 </linearGradient>
                 <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
@@ -378,81 +364,87 @@ export const SensorMonitoring: React.FC = () => {
                 />
               )}
 
-              {(activeMetric === 'all' || activeMetric === 'ph') && (
-                <Line 
+              {(activeMetric === 'all' || activeMetric === 'temperature') && (
+                <Area 
                   type="monotone" 
-                  dataKey="soilPh" 
-                  name="Soil pH (0-14 Scale)" 
-                  stroke="#0d9488" 
-                  strokeWidth={3} 
-                  dot={{ r: 3, fill: '#0d9488' }} 
+                  dataKey="temperature" 
+                  name="Temperature (°C)" 
+                  stroke="#f59e0b" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#tempGrad)" 
                 />
               )}
 
-              {(activeMetric === 'all' || activeMetric === 'climate') && (
-                <>
-                  <Area 
-                    type="monotone" 
-                    dataKey="temperature" 
-                    name="Temperature (°C)" 
-                    stroke="#f59e0b" 
-                    strokeWidth={2} 
-                    fillOpacity={1} 
-                    fill="url(#tempGrad)" 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="humidity" 
-                    name="Humidity (%)" 
-                    stroke="#06b6d4" 
-                    strokeWidth={2} 
-                    fillOpacity={1} 
-                    fill="url(#humGrad)" 
-                  />
-                </>
+              {(activeMetric === 'all' || activeMetric === 'humidity') && (
+                <Area 
+                  type="monotone" 
+                  dataKey="humidity" 
+                  name="Humidity (%)" 
+                  stroke="#06b6d4" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#humGrad)" 
+                />
               )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Soil pH Crop Suitability Matrix & Scientific Disclaimer (USER RECOMMENDATION 1) */}
+      {/* Soil Moisture Hysteresis & Automated Irrigation Boundaries */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Sprout className="w-5 h-5 text-emerald-600" />
             <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-              Soil pH Crop Suitability Spectrum (Current: {sensors.soilPh} pH)
+              Autonomous Closed-Loop Hysteresis Architecture
             </h3>
           </div>
-          <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950 px-3 py-1 rounded-full border border-teal-200">
-            {SOIL_PH_INFO.status}
+          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-3 py-1 rounded-full border border-emerald-200">
+            Mode: {irrigationMode.toUpperCase()}
           </span>
         </div>
 
-        {/* Crop Suitability Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {SOIL_PH_INFO.cropSuitability.map((crop, i) => (
-            <div key={i} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-center space-y-1">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">
-                {crop.crop}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono">
-                {crop.idealPh} pH
-              </span>
-              <span className="text-[10px] font-bold text-emerald-600 block">
-                {crop.status}
-              </span>
+        {/* 3 Operational Zones */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300">Dry Trigger Threshold</span>
+              <span className="text-sm font-black text-amber-600">&le; {moistureThresholdLow}%</span>
             </div>
-          ))}
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              When soil moisture drops below {moistureThresholdLow}%, the ESP32 automatically energizes the relay (GPIO 5 &rarr; LOW) to turn ON the pump.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Hysteresis Buffer Zone</span>
+              <span className="text-sm font-black text-emerald-600">{moistureThresholdLow}% &ndash; {moistureThresholdHigh}%</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              In this band, the pump preserves its current state. This prevents rapid on/off oscillation (relay chatter) as water seeps in.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-sky-800 dark:text-sky-300">Target Moisture Saturation</span>
+              <span className="text-sm font-black text-sky-600">&ge; {moistureThresholdHigh}%</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              When soil reaches {moistureThresholdHigh}%, the ESP32 immediately de-energizes the relay (GPIO 5 &rarr; HIGH) to shut OFF the pump.
+            </p>
+          </div>
         </div>
 
-        {/* Scientific Disclaimer Note explicitly requested by user */}
-        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        {/* Safety & Calibration Note */}
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+          <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Agricultural Chemistry Principle: </strong>
-            {SOIL_PH_INFO.disclaimer} For school model demonstration, the pH probe is calibrated in a prepared soil-water sample (1:2.5 ratio).
+            <strong>Autonomous Safety Protections: </strong>
+            1) Boot-time relay lock (pump starts OFF). 2) Sensor wire fault abort (ADC &lt; 50 or &gt; 4080 halts watering immediately). 3) 3-minute continuous runtime limit to prevent flooding or pump burnout. 4) Works completely autonomously without needing the phone or web dashboard open.
           </p>
         </div>
       </div>

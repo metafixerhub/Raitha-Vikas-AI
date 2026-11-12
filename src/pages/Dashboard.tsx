@@ -130,11 +130,11 @@ export const Dashboard: React.FC = () => {
   const handleTestVoice = () => {
     const greetingText = currentGreeting.greeting;
     triggerVoiceAnnouncement(
-      `${greetingText} Soil moisture is ${sensors.soilMoisture} percent, soil pH is ${sensors.soilPh}. Irrigation pump is ${sensors.pumpStatus ? 'running' : 'turned off'}.`,
+      `${greetingText} Soil moisture is ${sensors.soilMoisture} percent (${sensors.moistureStatus}). Irrigation pump is ${sensors.pumpStatus ? 'running' : 'turned off'}.`,
       'system',
       'info',
-      `${currentGreeting.greeting} ಮಣ್ಣಿನ ತೇವಾಂಶ ${sensors.soilMoisture}% ಮತ್ತು ಪಿಎಚ್ ${sensors.soilPh} ರಷ್ಟಿದೆ.`,
-      `${currentGreeting.greeting} मिट्टी की नमी ${sensors.soilMoisture}% और पीएच मान ${sensors.soilPh} है।`
+      `${currentGreeting.greeting} ಮಣ್ಣಿನ ತೇವಾಂಶ ${sensors.soilMoisture}% ರಷ್ಟಿದೆ. ನೀರಾವರಿ ಪಂಪ್ ${sensors.pumpStatus ? 'ಚಾಲನೆಯಲ್ಲಿದೆ' : 'ಸ್ಥಗಿತಗೊಂಡಿದೆ'}.`,
+      `${currentGreeting.greeting} मिट्टी की नमी ${sensors.soilMoisture}% है। सिंचाई पंप ${sensors.pumpStatus ? 'चालू है' : 'बंद है'}।`
     );
   };
 
@@ -275,14 +275,22 @@ export const Dashboard: React.FC = () => {
               <span className="text-xl font-black text-slate-900 dark:text-white">
                 Moisture: {sensors.soilMoisture}%
               </span>
-              <span className="text-xs font-bold text-amber-600">(Dry)</span>
+              <span className={`text-xs font-bold ${
+                sensors.soilMoisture < 35 ? 'text-amber-600' : sensors.soilMoisture > 65 ? 'text-sky-600' : 'text-emerald-600'
+              }`}>
+                ({sensors.moistureStatus || (sensors.soilMoisture < 35 ? 'Dry' : sensors.soilMoisture > 65 ? 'Wet' : 'Optimal')})
+              </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-              <Beaker className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Soil pH: <strong className="font-extrabold text-emerald-600">{sensors.soilPh}</strong> (Slightly Acidic)</span>
+              <Sprout className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Soil Condition: <strong className="font-extrabold text-emerald-600">{sensors.moistureStatus || (sensors.soilMoisture < 35 ? 'Dry' : sensors.soilMoisture > 65 ? 'Wet' : 'Normal')}</strong> (Capacitive GPIO 34)</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-snug">
-              Optimal root uptake for {activeField.cropType.split(' ')[0]}. Nutrient absorption is high.
+              {sensors.soilMoisture < 35 
+                ? 'Moisture is below the dry trigger threshold. Irrigation recommended.'
+                : sensors.soilMoisture > 65 
+                ? 'Soil is well saturated. No watering required.' 
+                : 'Optimal root zone hydration for healthy crop growth.'}
             </p>
           </div>
 
@@ -333,31 +341,55 @@ export const Dashboard: React.FC = () => {
 
         </div>
 
-        {/* Real-time Gemini AI Farm Advisor Banner */}
+        {/* Raitha Vikas AI Farm Advisor Banner */}
         <div 
           onClick={() => setActiveTab('assistant')}
-          className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-forest-950 via-forest-900 to-aiBlue-950 text-white cursor-pointer hover:shadow-xl transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-aiBlue-500/30 group"
+          className="mt-4 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-950 text-white cursor-pointer hover:shadow-2xl hover:border-slate-600/80 transition-all border border-slate-800 shadow-xl overflow-hidden relative group"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-aiBlue-500/20 border border-aiBlue-400/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-harvest-300" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm sm:text-base text-white">Ask Raitha Vikas AI Advisor</h3>
-                <span className="text-[10px] font-black bg-aiBlue-500/30 text-aiBlue-200 px-2.5 py-0.5 rounded-full border border-aiBlue-400/40">
-                  Gemini Powered
-                </span>
+          {/* Green Agricultural Accent Line */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-forest-700" />
+
+          <div className="p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 p-1.5 flex items-center justify-center shrink-0 border border-slate-700 shadow-md group-hover:scale-105 transition-transform">
+                <img src="/logo.png" alt="Raitha Vikas" className="w-full h-full object-contain" />
               </div>
-              <p className="text-xs text-forest-200/90">
-                Get instant crop advice personalized with your live soil moisture ({sensors.soilMoisture}%) & pH ({sensors.soilPh}).
-              </p>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-extrabold text-base sm:text-lg text-white tracking-tight">
+                    Ask Raitha Vikas AI Advisor
+                  </h3>
+                  <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/40 backdrop-blur-sm">
+                    School Science Edition 🌾
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Live Telemetry Synced
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  Real-time agronomy intelligence conditioned on your soil moisture (<span className="text-emerald-400 font-bold">{sensors.soilMoisture}%</span>), temperature (<span className="text-sky-300 font-bold">{sensors.temperature}°C</span>), and ICAR advisory models.
+                </p>
+
+                {/* Quick Consultation Chips */}
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition">
+                    💧 Should I water today?
+                  </span>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition">
+                    🌾 Tomato leaf spots
+                  </span>
+                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition">
+                    📈 Mandi rate forecast
+                  </span>
+                </div>
+              </div>
             </div>
+
+            <button className="w-full md:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-forest-800 to-emerald-600 hover:from-forest-700 hover:to-emerald-500 text-white font-extrabold text-xs hover:opacity-95 shrink-0 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 transition group-hover:translate-x-0.5">
+              <span>Ask Raitha Vikas AI</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
-          <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-harvest-400 to-harvest-500 text-slate-950 font-black text-xs hover:from-harvest-300 hover:to-harvest-400 shrink-0 flex items-center gap-1.5 shadow-md transition">
-            <span>Consult AI Advisor</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
 
       </div>
@@ -504,39 +536,39 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Card 4: Controller & Pump Battery (MAX17048 Fuel Gauge) */}
+          {/* Card 4: Sensor & Hardware Safety Health */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3">
             <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-2xl bg-forest-50 dark:bg-forest-950/60 text-forest-700 dark:text-fresh-400 flex items-center justify-center">
-                <BatteryCharging className="w-5 h-5" />
+              <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
+                sensors.sensorFault 
+                  ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400' 
+                  : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+              }`}>
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <span className="text-[11px] font-semibold text-slate-500">
-                Battery (MAX17048)
+                Sensor & Safety Health
               </span>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  {isHardwareMode && !esp32.connected ? 'Offline' : `${sensors.controllerBatteryPercent}%`}
-                </span>
-                {(!isHardwareMode || esp32.connected) && (
-                  <span className="text-xs font-bold text-slate-400">
-                    ({sensors.controllerBatteryVoltage}V)
-                  </span>
+              <div className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                {sensors.sensorFault ? (
+                  <span className="text-rose-600 dark:text-rose-400">Sensor Fault</span>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400">Sensors OK</span>
                 )}
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div 
-                  className="h-full bg-forest-600 rounded-full transition-all duration-500" 
-                  style={{ width: `${Math.min(100, Math.max(0, sensors.controllerBatteryPercent))}%` }}
-                />
-              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {sensors.sensorFault 
+                  ? 'Soil sensor disconnected or out of range' 
+                  : 'Soil (GPIO 34) & DHT22 (GPIO 4) Normal'}
+              </p>
             </div>
 
             <div>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate">
-                ⚡ Pump: Separate DC Battery
+                ⚡ Pump: Independent DC Supply
               </span>
             </div>
           </div>
@@ -552,7 +584,7 @@ export const Dashboard: React.FC = () => {
                 <Power className="w-5 h-5" />
               </div>
               <span className="text-[11px] font-semibold text-slate-500">
-                Pump (5V Relay)
+                Pump Relay (GPIO 5)
               </span>
             </div>
 
@@ -928,14 +960,14 @@ export const Dashboard: React.FC = () => {
                 <span className="text-[8px] text-slate-400 font-normal">(DHT22 + Soil)</span>
               </div>
               <div className="p-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex flex-col items-center">
-                <span className="text-forest-600 text-xs mb-0.5">🔋</span>
-                <span className="leading-tight">MAX17048</span>
-                <span className="text-[8px] text-slate-400 font-normal">(18650 Fuel Gauge)</span>
+                <span className="text-amber-500 text-xs mb-0.5">⚡</span>
+                <span className="leading-tight">GPIO 5 Relay</span>
+                <span className="text-[8px] text-slate-400 font-normal">(Optoisolated)</span>
               </div>
               <div className="p-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex flex-col items-center">
                 <span className="text-sky-500 text-xs mb-0.5">💧</span>
-                <span className="leading-tight">5V Relay</span>
-                <span className="text-[8px] text-slate-400 font-normal">(Pump DC Battery)</span>
+                <span className="leading-tight">DC Pump</span>
+                <span className="text-[8px] text-slate-400 font-normal">(Separate Battery)</span>
               </div>
             </div>
 

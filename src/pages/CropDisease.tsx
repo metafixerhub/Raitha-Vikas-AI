@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useFarmStore } from '../store/useFarmStore';
 import { apiService } from '../services/apiService';
+import { MarkdownRenderer } from '../components/common/MarkdownRenderer';
 import { 
   ScanLine, 
   UploadCloud, 
@@ -314,7 +315,7 @@ export const CropDisease: React.FC = () => {
 
     try {
       if (selectedFile) {
-        // Try backend / Gemini multimodal analysis if server running
+        // Try backend multimodal vision analysis if server running
         try {
           const apiRes = await apiService.analyzeCropLeaf(selectedFile, activeCropName);
           if (apiRes && (apiRes.possibleDisease || apiRes.cropName)) {
@@ -708,9 +709,7 @@ export const CropDisease: React.FC = () => {
                   <ShieldAlert className="w-3.5 h-3.5 text-aiBlue-600 dark:text-aiBlue-400" />
                   KVK Expert Consultation Guidance
                 </span>
-                <p className="text-xs text-aiBlue-950 dark:text-aiBlue-200/90 leading-relaxed font-medium">
-                  {analysisResult.expertAdvice}
-                </p>
+                <MarkdownRenderer content={analysisResult.expertAdvice} />
               </div>
 
               {/* Disclaimer Footer */}

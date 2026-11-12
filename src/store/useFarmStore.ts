@@ -246,10 +246,10 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   // Mandi APMC Prices
   mandiPrices: INITIAL_MANDI_PRICES,
 
-  irrigationMode: 'auto',
+  irrigationMode: 'manual',
   setIrrigationMode: (mode) => {
     set({ irrigationMode: mode });
-    if (get().isHardwareMode && (mode === 'auto' || mode === 'manual')) {
+    if (mode === 'auto' || mode === 'manual') {
       apiService.setHardwareIrrigationSettings({
         mode,
         moistureThresholdLow: get().moistureThresholdLow,
@@ -266,13 +266,11 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   moistureThresholdHigh: 70,
   setMoistureThresholds: (low, high) => {
     set({ moistureThresholdLow: low, moistureThresholdHigh: high });
-    if (get().isHardwareMode) {
-      apiService.setHardwareIrrigationSettings({
-        mode: get().irrigationMode === 'auto' ? 'auto' : 'manual',
-        moistureThresholdLow: low,
-        moistureThresholdHigh: high
-      }, get().esp32Url).catch(console.error);
-    }
+    apiService.setHardwareIrrigationSettings({
+      mode: get().irrigationMode === 'auto' ? 'auto' : 'manual',
+      moistureThresholdLow: low,
+      moistureThresholdHigh: high
+    }, get().esp32Url).catch(console.error);
   },
 
   wateringLogs: INITIAL_WATERING_HISTORY,
@@ -282,11 +280,10 @@ export const useFarmStore = create<FarmState>((set, get) => ({
     const currentState = get().sensors.pumpStatus;
     const newState = explicitState !== undefined ? explicitState : !currentState;
 
-    if (newState === currentState) return;
+    // Send command directly to ESP32 hardware
+    apiService.setHardwarePump(newState ? 'START' : 'STOP', 3, get().esp32Url).catch(console.error);
 
-    if (get().isHardwareMode) {
-      apiService.setHardwarePump(newState ? 'START' : 'STOP', 3, get().esp32Url).catch(console.error);
-    }
+    if (newState === currentState && explicitState === undefined) return;
 
     if (newState) {
       set((state) => ({
@@ -476,7 +473,7 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   weather: INITIAL_WEATHER,
 
   // ESP32 State & Live Wi-Fi Node Link
-  esp32Url: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || 'http://192.168.4.1' : 'http://192.168.4.1',
+  esp32Url: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || 'http://10.32.173.86' : 'http://10.32.173.86',
   setEsp32Url: (url: string) => {
     if (typeof window !== 'undefined') localStorage.setItem('esp32_ip', url);
     set({ esp32Url: url });
@@ -498,7 +495,7 @@ export const useFarmStore = create<FarmState>((set, get) => ({
     connected: false,
     isSimulated: true,
     status: 'Demo Mode',
-    ipAddress: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || '192.168.4.1' : '192.168.4.1',
+    ipAddress: typeof window !== 'undefined' ? localStorage.getItem('esp32_ip') || '10.32.173.86' : '10.32.173.86',
     port: 80,
     macAddress: '24:6F:28:B2:7C:1E',
     signalStrengthDbm: -64,
@@ -515,7 +512,9 @@ export const useFarmStore = create<FarmState>((set, get) => ({
 
     const status = await apiService.getESP32Status(url);
     if (status.connected) {
+      if (typeof window !== 'undefined') localStorage.setItem('is_hardware_mode', 'true');
       set((state) => ({
+        isHardwareMode: true,
         esp32: {
           ...state.esp32,
           connected: true,
@@ -565,6 +564,7 @@ export const useFarmStore = create<FarmState>((set, get) => ({
       const s = res.sensors;
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       set((state) => ({
+        irrigationMode: (s.irrigationMode === 'auto' || s.irrigationMode === 'manual') ? s.irrigationMode : state.irrigationMode,
         sensors: {
           ...state.sensors,
           temperature: s.temperature,

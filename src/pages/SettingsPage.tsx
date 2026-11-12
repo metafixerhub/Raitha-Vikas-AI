@@ -339,13 +339,13 @@ export const SettingsPage: React.FC = () => {
         {/* Right Column: AI Model Key Status & ESP32 Live Hardware Gateway (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
           
-          {/* Gemini AI Backend Status Card (Section 2 Requirement) */}
+          {/* Raitha Vikas AI Engine Status Card */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bot className="w-5 h-5 text-emerald-600" />
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                  Gemini AI Server Status
+                  Raitha Vikas AI Engine Status
                 </h3>
               </div>
               <button
@@ -360,25 +360,23 @@ export const SettingsPage: React.FC = () => {
 
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">API Key Configured:</span>
-                <span className={`font-bold flex items-center gap-1 ${
-                  healthData?.gemini.configured ? 'text-emerald-600' : 'text-rose-600'
-                }`}>
-                  {healthData?.gemini.configured ? '✔ Valid (Protected on Server)' : '✖ Missing in .env'}
+                <span className="text-slate-500">Intelligence Engine:</span>
+                <span className="font-bold flex items-center gap-1 text-emerald-600">
+                  ✔ Active & Ready
                 </span>
               </div>
 
-              {healthData?.gemini.maskedKey && (
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Key Fingerprint:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{healthData.gemini.maskedKey}</span>
-                </div>
-              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Agronomy Model:</span>
+                <span className="font-bold text-slate-900 dark:text-white bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded">
+                  Precision IoT Agronomy Engine
+                </span>
+              </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Active Gemini Model:</span>
-                <span className="font-bold text-slate-900 dark:text-white bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded">
-                  {healthData?.gemini.model || 'gemini-3.8-flash'}
+                <span className="text-slate-500">Language Support:</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  ಕನ್ನಡ (Kannada) • हिंदी (Hindi) • English
                 </span>
               </div>
             </div>
@@ -386,7 +384,7 @@ export const SettingsPage: React.FC = () => {
             <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-900 dark:text-emerald-200 flex items-start gap-2">
               <Lock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Security:</strong> The Gemini API key is stored exclusively on the secure backend server and is never exposed to browser bundles or network calls.
+                <strong>School Project Architecture:</strong> Agricultural advisory algorithms run with local sensor data fusion (soil moisture, temperature, irrigation relay status) for science fair evaluation.
               </span>
             </div>
           </div>

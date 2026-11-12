@@ -212,19 +212,21 @@ app.get('/api/esp32/sensors', async (req: Request, res: Response) => {
 });
 
 app.post('/api/esp32/pump', async (req: Request, res: Response) => {
-  const { state, timeoutMinutes = 30, overrideUrl } = req.body;
+  const { action, state, timeoutMinutes = 30, overrideUrl } = req.body;
+  const actionOrState = action || (state !== undefined ? Boolean(state) : 'STOP');
   try {
-    const result = await esp32Service.setPumpState(Boolean(state), timeoutMinutes, overrideUrl);
+    const result = await esp32Service.setPumpState(actionOrState, timeoutMinutes, overrideUrl);
 
     // Log to DB
+    const isStart = actionOrState === 'START' || actionOrState === true;
     dbOps.savePumpLog({
       id: 'pump-' + Date.now(),
-      durationMinutes: state ? 0 : 15,
-      volumeLiters: state ? 0 : 180,
-      triggerType: 'Manual Hardware Actuation',
+      durationMinutes: isStart ? 0 : 15,
+      volumeLiters: isStart ? 0 : 180,
+      triggerType: typeof actionOrState === 'string' ? actionOrState : (actionOrState ? 'Manual ON' : 'Manual OFF'),
       moistureBefore: 32,
       moistureAfter: 55,
-      status: state ? 'In Progress' : 'Completed',
+      status: isStart ? 'In Progress' : 'Completed',
       isSimulated: false
     });
 

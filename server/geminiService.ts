@@ -102,6 +102,8 @@ Core Behavioral Guidelines:
 `;
 
     try {
+      const ai = this.getClient();
+      const model = this.getModelName();
       const response = await ai.models.generateContent({
         model: model,
         contents: [
@@ -109,11 +111,65 @@ Core Behavioral Guidelines:
         ]
       });
 
-      return response.text || 'I could not generate an answer. Please try rephrasing your farming question.';
-    } catch (err: any) {
-      this.handleGeminiError(err, model);
-      throw err;
+      if (response.text && response.text.trim()) {
+        return response.text.trim();
+      }
+      throw new Error('Gemini returned an empty response.');
+    } catch (primaryErr: any) {
+      console.warn(`[Gemini Error] ${primaryErr?.message || primaryErr}. Automatically switching to OpenRouter NVIDIA Nemotron 3 Ultra...`);
+      try {
+        return await this.askOpenRouterFallback(prompt, systemInstruction);
+      } catch (fallbackErr: any) {
+        console.error(`[OpenRouter Fallback Error] ${fallbackErr?.message || fallbackErr}`);
+        this.handleGeminiError(primaryErr, this.getModelName());
+        throw fallbackErr;
+      }
     }
+  }
+
+  /**
+   * Automatic Failover: NVIDIA Nemotron 3 Ultra via OpenRouter
+   */
+  public async askOpenRouterFallback(prompt: string, systemInstruction: string): Promise<string> {
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    const openRouterModel = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free';
+
+    if (!openRouterKey || !openRouterKey.trim()) {
+      throw new Error('OPENROUTER_API_KEY is not configured in .env for failover.');
+    }
+
+    console.log(`[Failover] Routing request to OpenRouter model: ${openRouterModel}`);
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openRouterKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'Raitha Vikas AI'
+      },
+      body: JSON.stringify({
+        model: openRouterModel,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.6,
+        max_tokens: 1024
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`OpenRouter failover request failed (${res.status}): ${errText}`);
+    }
+
+    const data: any = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content || !content.trim()) {
+      throw new Error('OpenRouter response returned empty content.');
+    }
+    return content.trim();
   }
 
   /**

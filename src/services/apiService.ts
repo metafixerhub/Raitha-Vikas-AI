@@ -160,7 +160,64 @@ Farmer Question: ${prompt}`
       }
     }
 
-    // 3. Built-in On-Device Agronomy Engine (Instant, Accurate, Multi-lingual)
+    // 3. Try automatic OpenRouter fallback (NVIDIA Nemotron 3 Ultra)
+    const openRouterClientKey = 
+      (typeof window !== 'undefined' && localStorage.getItem('openrouter_api_key')) ||
+      (import.meta as any).env?.VITE_OPENROUTER_API_KEY ||
+      '';
+
+    if (openRouterClientKey && openRouterClientKey.trim()) {
+      try {
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openRouterClientKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'http://localhost:3000',
+            'X-Title': 'Raitha Vikas AI'
+          },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+          messages: [
+            {
+              role: 'system',
+              content: `You are Raitha Vikas AI (ರೈತ ವಿಕಾಸ AI), an expert precision agronomy advisor for Indian agriculture.
+Language: ${language === 'kn' ? 'Kannada (ಕನ್ನಡ)' : language === 'hi' ? 'Hindi (हिंदी)' : 'English'}.
+Live Farm Telemetry:
+- Crop Stand: ${farmContext?.cropType || 'Paddy / Tomato'}
+- Soil Moisture: ${farmContext?.soilMoisture ?? 32}%
+- Soil pH: ${farmContext?.soilPh ?? 6.5}
+- Temperature: ${farmContext?.temperature ?? 28.5}°C
+- Air Humidity: ${farmContext?.humidity ?? 71}%
+- Irrigation Pump: ${farmContext?.pumpStatus ? 'ON (Water flowing)' : 'OFF (Standby)'}`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.6,
+          max_tokens: 1024
+        })
+      });
+
+      if (openRouterRes.ok) {
+        const orParsed = await this.safeJsonParse(openRouterRes);
+        const orAnswer = orParsed.data?.choices?.[0]?.message?.content;
+        if (orAnswer && orAnswer.trim()) {
+          return {
+            answer: orAnswer.trim(),
+            sessionId,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }
+    } catch (openRouterErr) {
+      console.warn('Direct OpenRouter failover call failed:', openRouterErr);
+    }
+  }
+
+    // 4. Built-in On-Device Agronomy Engine (Instant, Accurate, Multi-lingual)
     const localAnswer = generateAgronomyAdvice(prompt, farmContext, language);
     return {
       answer: localAnswer,
